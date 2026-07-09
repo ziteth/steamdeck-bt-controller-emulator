@@ -14,7 +14,7 @@ from enum import Enum
 import gi
 
 gi.require_version('Gtk', '4.0')
-from gi.repository import GLib, Gtk
+from gi.repository import Gdk, GLib, Gtk
 
 
 class ConnectTypeEnum(Enum):
@@ -739,8 +739,19 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
         # Build UI
         self._build_ui()
 
+    def _set_black_theme(self):
+        css_provider = Gtk.CssProvider()
+        black_theme_css = 'window, .background { background-color: #000000; }'
+        css_provider.load_from_data(black_theme_css.encode('utf-8'))
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
     def _build_ui(self):
         """Build the user interface."""
+
+        self._set_black_theme()
+
         # Main box
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         main_box.set_margin_top(6)
