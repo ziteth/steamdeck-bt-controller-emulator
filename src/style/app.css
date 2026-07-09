@@ -15,22 +15,39 @@ headerbar {
 
 /* Standard Buttons */
 button {
-    background-color: #121212;
-    color: #ffffff;
-    border: 1px solid #121212;
-    border-radius: 6px;
-    padding: 6px 12px;
+    background-image: none !important;
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 1px solid #1a1a1a !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
 }
 
 /* Button hover state */
 button:hover {
-    background-color: #1a1a1a;
-    border-color: #121212;
+    background-image: none !important;
+    background-color: #121212 !important;
+    border-color: #262626 !important;
 }
 
 /* Button active and toggled states */
 button:active, 
 button:checked {
-    background-color: #121212;
-    border-color: #121212;
+    background-image: none !important;
+    background-color: #1a1a1a !important;
+    border-color: #333333 !important;
+}
+
+/* Fix for window control buttons (minimize, maximize, close) size distortion */
+headerbar windowcontrols button {
+    padding: 0 !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    background-color: transparent !important;
+    border: none !important;
+}
+
+/* Hover effects specifically for window control buttons */
+headerbar windowcontrols button:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
 }
