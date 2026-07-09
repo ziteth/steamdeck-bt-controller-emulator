@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/xXJSONDeruloXx/steamdeck-bt-controller-emulator.git"
+REPO_URL="https://github.com/ziteth/steamdeck-bt-controller-emulator"
 INSTALL_DIR="$HOME/steamdeck-bt-controller-emulator"
 
 echo "=== BT Controller Emulator - Installer ==="
