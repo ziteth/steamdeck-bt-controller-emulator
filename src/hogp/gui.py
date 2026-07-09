@@ -750,8 +750,6 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
     def _build_ui(self):
         """Build the user interface."""
 
-        self._set_black_theme()
-
         # Main box
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         main_box.set_margin_top(6)
@@ -841,6 +839,8 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
         main_box.append(button_box)
 
         self.set_child(main_box)
+
+        self._set_black_theme()
 
     def _on_bluetooth_toggled(self, button):
         """Handle Bluetooth mode selection."""
