@@ -13,7 +13,7 @@ This is a HID-over-GATT profile implementation using BlueZ D-Bus APIs for Blueto
 Copy the following command and paste into your terminal (konsole on Steam Deck):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xXJSONDeruloXx/steamdeck-bt-controller-emulator/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ziteth/steamdeck-bt-controller-emulator/main/install.sh | bash
 ```
 
 - Installs to `~/steamdeck-bt-controller-emulator`
@@ -26,13 +26,13 @@ I recommend right clicking/long pressing on the app or desktop shortcut and addi
 Run the same installation command to update to the latest version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xXJSONDeruloXx/steamdeck-bt-controller-emulator/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ziteth/steamdeck-bt-controller-emulator/main/install.sh | bash
 ```
 
 ### Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xXJSONDeruloXx/steamdeck-bt-controller-emulator/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ziteth/steamdeck-bt-controller-emulator/main/uninstall.sh | bash
 ```
 
 
