@@ -155,22 +155,21 @@ class ControllerVisualizer(Gtk.Box):
         info_label.set_justify(Gtk.Justification.CENTER)
         self.append(info_label)
 
-        # On-screen buttons
-        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        button_box.set_halign(Gtk.Align.CENTER)
+        button_box = Gtk.CenterBox()
         button_box.set_margin_top(30)
+        button_box.set_hexpand(True)
 
-        # Home/Nexus button (sends Ctrl+1)
         self.home_button = Gtk.Button(label='⌂ Home')
-        self.home_button.set_size_request(150, 60)
+        self.home_button.set_size_request(150, 150)
         self.home_button.connect('clicked', self._send_home)
-        button_box.append(self.home_button)
+        button_box.set_start_widget(self.home_button)
 
-        # QAM button (sends Ctrl+2)
-        self.qam_button = Gtk.Button(label='⋯ QAM')
-        self.qam_button.set_size_request(150, 60)
+        self.qam_button = Gtk.Button(label='⋯\nQAM')
+        self.qam_button.set_size_request(150, 150)
         self.qam_button.connect('clicked', self._send_qam)
-        button_box.append(self.qam_button)
+        button_box.set_end_widget(self.qam_button)
+
+        button_box.set_center_widget(None)
 
         self.append(button_box)
 
