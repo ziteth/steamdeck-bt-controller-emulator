@@ -259,11 +259,6 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
         main_box.set_margin_start(6)
         main_box.set_margin_end(6)
 
-        # Header bar
-        header = Gtk.HeaderBar()
-        header.set_title_widget(Gtk.Label(label='BT Controller Emulator'))
-        self.set_titlebar(header)
-
         # Mode selection
         mode_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         mode_box.set_halign(Gtk.Align.CENTER)
