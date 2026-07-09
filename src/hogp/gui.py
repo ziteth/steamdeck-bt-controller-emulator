@@ -224,10 +224,9 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
         self.set_default_size(1280, 800)
         self.set_resizable(True)
 
-        # default mode
         self._mode = ConnectTypeEnum.BLUETOOTH
 
-        # State
+        self._usb_gadget = None
         self._bus = None
         self._adapter_path = None
         self._gatt_app = None
@@ -238,7 +237,6 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
         self._running = False
         self._update_timeout_id = None
 
-        # Build UI
         self._build_ui()
 
     def _set_black_theme(self):
