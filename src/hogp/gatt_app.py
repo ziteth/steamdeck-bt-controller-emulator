@@ -10,7 +10,7 @@ Implements:
 
 import logging
 import struct
-from typing import Dict, List, Any, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 from gi.repository import Gio, GLib
 
@@ -20,173 +20,261 @@ logger = logging.getLogger(__name__)
 DEFAULT_REPORT_RATE_HZ = 10
 
 # Standard UUIDs
-HID_SERVICE_UUID = "00001812-0000-1000-8000-00805f9b34fb"
-HID_INFO_UUID = "00002a4a-0000-1000-8000-00805f9b34fb"
-REPORT_MAP_UUID = "00002a4b-0000-1000-8000-00805f9b34fb"
-HID_CONTROL_POINT_UUID = "00002a4c-0000-1000-8000-00805f9b34fb"
-REPORT_UUID = "00002a4d-0000-1000-8000-00805f9b34fb"
-REPORT_REFERENCE_UUID = "00002908-0000-1000-8000-00805f9b34fb"
+HID_SERVICE_UUID = '00001812-0000-1000-8000-00805f9b34fb'
+HID_INFO_UUID = '00002a4a-0000-1000-8000-00805f9b34fb'
+REPORT_MAP_UUID = '00002a4b-0000-1000-8000-00805f9b34fb'
+HID_CONTROL_POINT_UUID = '00002a4c-0000-1000-8000-00805f9b34fb'
+REPORT_UUID = '00002a4d-0000-1000-8000-00805f9b34fb'
+REPORT_REFERENCE_UUID = '00002908-0000-1000-8000-00805f9b34fb'
 
 # Generic Access Profile (GAP) UUIDs
-GAP_SERVICE_UUID = "00001800-0000-1000-8000-00805f9b34fb"
-DEVICE_NAME_UUID = "00002a00-0000-1000-8000-00805f9b34fb"
+GAP_SERVICE_UUID = '00001800-0000-1000-8000-00805f9b34fb'
+DEVICE_NAME_UUID = '00002a00-0000-1000-8000-00805f9b34fb'
 
 # Device Information Service UUIDs
-DEVICE_INFO_SERVICE_UUID = "0000180a-0000-1000-8000-00805f9b34fb"
-MANUFACTURER_NAME_UUID = "00002a29-0000-1000-8000-00805f9b34fb"
-MODEL_NUMBER_UUID = "00002a24-0000-1000-8000-00805f9b34fb"
-PNP_ID_UUID = "00002a50-0000-1000-8000-00805f9b34fb"
+DEVICE_INFO_SERVICE_UUID = '0000180a-0000-1000-8000-00805f9b34fb'
+MANUFACTURER_NAME_UUID = '00002a29-0000-1000-8000-00805f9b34fb'
+MODEL_NUMBER_UUID = '00002a24-0000-1000-8000-00805f9b34fb'
+PNP_ID_UUID = '00002a50-0000-1000-8000-00805f9b34fb'
 
 # D-Bus interfaces
-GATT_SERVICE_IFACE = "org.bluez.GattService1"
-GATT_CHAR_IFACE = "org.bluez.GattCharacteristic1"
-GATT_DESC_IFACE = "org.bluez.GattDescriptor1"
-DBUS_OM_IFACE = "org.freedesktop.DBus.ObjectManager"
-DBUS_PROPS_IFACE = "org.freedesktop.DBus.Properties"
+GATT_SERVICE_IFACE = 'org.bluez.GattService1'
+GATT_CHAR_IFACE = 'org.bluez.GattCharacteristic1'
+GATT_DESC_IFACE = 'org.bluez.GattDescriptor1'
+DBUS_OM_IFACE = 'org.freedesktop.DBus.ObjectManager'
+DBUS_PROPS_IFACE = 'org.freedesktop.DBus.Properties'
 
 # Multi-function HID Report Map
 # Includes: Gamepad (Report ID 1), Keyboard (Report ID 2), Mouse (Report ID 3)
-REPORT_MAP = bytes([
-    # === GAMEPAD (Report ID 1) ===
-    0x05, 0x01,        # Usage Page (Generic Desktop)
-    0x09, 0x05,        # Usage (Gamepad)
-    0xA1, 0x01,        # Collection (Application)
-    0x85, 0x01,        #   Report ID (1)
-    
-    # 11 buttons: BTN_SOUTH, BTN_EAST, BTN_NORTH, BTN_WEST, BTN_TL, BTN_TR, 
-    #             BTN_SELECT, BTN_START, BTN_MODE, BTN_THUMBL, BTN_THUMBR
-    0x05, 0x09,        #   Usage Page (Button)
-    0x19, 0x01,        #   Usage Minimum (Button 1)
-    0x29, 0x0B,        #   Usage Maximum (Button 11)
-    0x15, 0x00,        #   Logical Minimum (0)
-    0x25, 0x01,        #   Logical Maximum (1)
-    0x75, 0x01,        #   Report Size (1)
-    0x95, 0x0B,        #   Report Count (11)
-    0x81, 0x02,        #   Input (Data, Variable, Absolute)
-    
-    # 5 bits padding to byte-align
-    0x75, 0x01,        #   Report Size (1)
-    0x95, 0x05,        #   Report Count (5)
-    0x81, 0x01,        #   Input (Constant) - padding
-    
-    # 4 main axes: X, Y, RX, RY (left stick X/Y, right stick X/Y)
-    0x05, 0x01,        #   Usage Page (Generic Desktop)
-    0x09, 0x30,        #   Usage (X)
-    0x09, 0x31,        #   Usage (Y)
-    0x09, 0x33,        #   Usage (Rx)
-    0x09, 0x34,        #   Usage (Ry)
-    0x16, 0x00, 0x80,  #   Logical Minimum (-32768)
-    0x26, 0xFF, 0x7F,  #   Logical Maximum (32767)
-    0x75, 0x10,        #   Report Size (16)
-    0x95, 0x04,        #   Report Count (4)
-    0x81, 0x02,        #   Input (Data, Variable, Absolute)
-    
-    # 2 trigger axes: Z, Rz (LT, RT) - unsigned 0-255
-    0x09, 0x32,        #   Usage (Z) - Left Trigger
-    0x09, 0x35,        #   Usage (Rz) - Right Trigger
-    0x15, 0x00,        #   Logical Minimum (0)
-    0x26, 0xFF, 0x00,  #   Logical Maximum (255)
-    0x75, 0x08,        #   Report Size (8)
-    0x95, 0x02,        #   Report Count (2)
-    0x81, 0x02,        #   Input (Data, Variable, Absolute)
-    
-    # D-pad as HAT switch
-    0x09, 0x39,        #   Usage (Hat Switch)
-    0x15, 0x00,        #   Logical Minimum (0)
-    0x25, 0x07,        #   Logical Maximum (7)
-    0x35, 0x00,        #   Physical Minimum (0)
-    0x46, 0x3B, 0x01,  #   Physical Maximum (315)
-    0x65, 0x14,        #   Unit (Degrees)
-    0x75, 0x08,        #   Report Size (8)
-    0x95, 0x01,        #   Report Count (1)
-    0x81, 0x02,        #   Input (Data, Variable, Absolute)
-    
-    0xC0,              # End Collection
-    
-    # === KEYBOARD (Report ID 2) ===
-    0x05, 0x01,        # Usage Page (Generic Desktop)
-    0x09, 0x06,        # Usage (Keyboard)
-    0xA1, 0x01,        # Collection (Application)
-    0x85, 0x02,        #   Report ID (2)
-    
-    # Modifier byte
-    0x05, 0x07,        #   Usage Page (Key Codes)
-    0x19, 0xE0,        #   Usage Minimum (Left Control)
-    0x29, 0xE7,        #   Usage Maximum (Right GUI)
-    0x15, 0x00,        #   Logical Minimum (0)
-    0x25, 0x01,        #   Logical Maximum (1)
-    0x75, 0x01,        #   Report Size (1)
-    0x95, 0x08,        #   Report Count (8)
-    0x81, 0x02,        #   Input (Data, Variable, Absolute)
-    
-    # Reserved byte
-    0x95, 0x01,        #   Report Count (1)
-    0x75, 0x08,        #   Report Size (8)
-    0x81, 0x01,        #   Input (Constant)
-    
-    # 6 key codes
-    0x95, 0x06,        #   Report Count (6)
-    0x75, 0x08,        #   Report Size (8)
-    0x15, 0x00,        #   Logical Minimum (0)
-    0x26, 0xFF, 0x00,  #   Logical Maximum (255)
-    0x05, 0x07,        #   Usage Page (Key Codes)
-    0x19, 0x00,        #   Usage Minimum (0)
-    0x2A, 0xFF, 0x00,  #   Usage Maximum (255)
-    0x81, 0x00,        #   Input (Data, Array)
-    
-    0xC0,              # End Collection
-    
-    # === MOUSE (Report ID 3) ===
-    0x05, 0x01,        # Usage Page (Generic Desktop)
-    0x09, 0x02,        # Usage (Mouse)
-    0xA1, 0x01,        # Collection (Application)
-    0x85, 0x03,        #   Report ID (3)
-    0x09, 0x01,        #   Usage (Pointer)
-    0xA1, 0x00,        #   Collection (Physical)
-    
-    # Buttons (3 buttons: left, right, middle)
-    0x05, 0x09,        #     Usage Page (Button)
-    0x19, 0x01,        #     Usage Minimum (Button 1)
-    0x29, 0x03,        #     Usage Maximum (Button 3)
-    0x15, 0x00,        #     Logical Minimum (0)
-    0x25, 0x01,        #     Logical Maximum (1)
-    0x95, 0x03,        #     Report Count (3)
-    0x75, 0x01,        #     Report Size (1)
-    0x81, 0x02,        #     Input (Data, Variable, Absolute)
-    
-    # 5 bits padding
-    0x95, 0x01,        #     Report Count (1)
-    0x75, 0x05,        #     Report Size (5)
-    0x81, 0x01,        #     Input (Constant)
-    
-    # X, Y relative movement
-    0x05, 0x01,        #     Usage Page (Generic Desktop)
-    0x09, 0x30,        #     Usage (X)
-    0x09, 0x31,        #     Usage (Y)
-    0x16, 0x00, 0x80,  #     Logical Minimum (-32768)
-    0x26, 0xFF, 0x7F,  #     Logical Maximum (32767)
-    0x75, 0x10,        #     Report Size (16)
-    0x95, 0x02,        #     Report Count (2)
-    0x81, 0x06,        #     Input (Data, Variable, Relative)
-    
-    # Wheel
-    0x09, 0x38,        #     Usage (Wheel)
-    0x15, 0x81,        #     Logical Minimum (-127)
-    0x25, 0x7F,        #     Logical Maximum (127)
-    0x75, 0x08,        #     Report Size (8)
-    0x95, 0x01,        #     Report Count (1)
-    0x81, 0x06,        #     Input (Data, Variable, Relative)
-    
-    0xC0,              #   End Collection
-    0xC0,              # End Collection
-])
+REPORT_MAP = bytes(
+    [
+        # === GAMEPAD (Report ID 1) ===
+        0x05,
+        0x01,  # Usage Page (Generic Desktop)
+        0x09,
+        0x05,  # Usage (Gamepad)
+        0xA1,
+        0x01,  # Collection (Application)
+        0x85,
+        0x01,  #   Report ID (1)
+        # 11 buttons: BTN_SOUTH, BTN_EAST, BTN_NORTH, BTN_WEST, BTN_TL, BTN_TR,
+        #             BTN_SELECT, BTN_START, BTN_MODE, BTN_THUMBL, BTN_THUMBR
+        0x05,
+        0x09,  #   Usage Page (Button)
+        0x19,
+        0x01,  #   Usage Minimum (Button 1)
+        0x29,
+        0x0B,  #   Usage Maximum (Button 11)
+        0x15,
+        0x00,  #   Logical Minimum (0)
+        0x25,
+        0x01,  #   Logical Maximum (1)
+        0x75,
+        0x01,  #   Report Size (1)
+        0x95,
+        0x0B,  #   Report Count (11)
+        0x81,
+        0x02,  #   Input (Data, Variable, Absolute)
+        # 5 bits padding to byte-align
+        0x75,
+        0x01,  #   Report Size (1)
+        0x95,
+        0x05,  #   Report Count (5)
+        0x81,
+        0x01,  #   Input (Constant) - padding
+        # 4 main axes: X, Y, RX, RY (left stick X/Y, right stick X/Y)
+        0x05,
+        0x01,  #   Usage Page (Generic Desktop)
+        0x09,
+        0x30,  #   Usage (X)
+        0x09,
+        0x31,  #   Usage (Y)
+        0x09,
+        0x33,  #   Usage (Rx)
+        0x09,
+        0x34,  #   Usage (Ry)
+        0x16,
+        0x00,
+        0x80,  #   Logical Minimum (-32768)
+        0x26,
+        0xFF,
+        0x7F,  #   Logical Maximum (32767)
+        0x75,
+        0x10,  #   Report Size (16)
+        0x95,
+        0x04,  #   Report Count (4)
+        0x81,
+        0x02,  #   Input (Data, Variable, Absolute)
+        # 2 trigger axes: Z, Rz (LT, RT) - unsigned 0-255
+        0x09,
+        0x32,  #   Usage (Z) - Left Trigger
+        0x09,
+        0x35,  #   Usage (Rz) - Right Trigger
+        0x15,
+        0x00,  #   Logical Minimum (0)
+        0x26,
+        0xFF,
+        0x00,  #   Logical Maximum (255)
+        0x75,
+        0x08,  #   Report Size (8)
+        0x95,
+        0x02,  #   Report Count (2)
+        0x81,
+        0x02,  #   Input (Data, Variable, Absolute)
+        # D-pad as HAT switch
+        0x09,
+        0x39,  #   Usage (Hat Switch)
+        0x15,
+        0x00,  #   Logical Minimum (0)
+        0x25,
+        0x07,  #   Logical Maximum (7)
+        0x35,
+        0x00,  #   Physical Minimum (0)
+        0x46,
+        0x3B,
+        0x01,  #   Physical Maximum (315)
+        0x65,
+        0x14,  #   Unit (Degrees)
+        0x75,
+        0x08,  #   Report Size (8)
+        0x95,
+        0x01,  #   Report Count (1)
+        0x81,
+        0x02,  #   Input (Data, Variable, Absolute)
+        0xC0,  # End Collection
+        # === KEYBOARD (Report ID 2) ===
+        0x05,
+        0x01,  # Usage Page (Generic Desktop)
+        0x09,
+        0x06,  # Usage (Keyboard)
+        0xA1,
+        0x01,  # Collection (Application)
+        0x85,
+        0x02,  #   Report ID (2)
+        # Modifier byte
+        0x05,
+        0x07,  #   Usage Page (Key Codes)
+        0x19,
+        0xE0,  #   Usage Minimum (Left Control)
+        0x29,
+        0xE7,  #   Usage Maximum (Right GUI)
+        0x15,
+        0x00,  #   Logical Minimum (0)
+        0x25,
+        0x01,  #   Logical Maximum (1)
+        0x75,
+        0x01,  #   Report Size (1)
+        0x95,
+        0x08,  #   Report Count (8)
+        0x81,
+        0x02,  #   Input (Data, Variable, Absolute)
+        # Reserved byte
+        0x95,
+        0x01,  #   Report Count (1)
+        0x75,
+        0x08,  #   Report Size (8)
+        0x81,
+        0x01,  #   Input (Constant)
+        # 6 key codes
+        0x95,
+        0x06,  #   Report Count (6)
+        0x75,
+        0x08,  #   Report Size (8)
+        0x15,
+        0x00,  #   Logical Minimum (0)
+        0x26,
+        0xFF,
+        0x00,  #   Logical Maximum (255)
+        0x05,
+        0x07,  #   Usage Page (Key Codes)
+        0x19,
+        0x00,  #   Usage Minimum (0)
+        0x2A,
+        0xFF,
+        0x00,  #   Usage Maximum (255)
+        0x81,
+        0x00,  #   Input (Data, Array)
+        0xC0,  # End Collection
+        # === MOUSE (Report ID 3) ===
+        0x05,
+        0x01,  # Usage Page (Generic Desktop)
+        0x09,
+        0x02,  # Usage (Mouse)
+        0xA1,
+        0x01,  # Collection (Application)
+        0x85,
+        0x03,  #   Report ID (3)
+        0x09,
+        0x01,  #   Usage (Pointer)
+        0xA1,
+        0x00,  #   Collection (Physical)
+        # Buttons (3 buttons: left, right, middle)
+        0x05,
+        0x09,  #     Usage Page (Button)
+        0x19,
+        0x01,  #     Usage Minimum (Button 1)
+        0x29,
+        0x03,  #     Usage Maximum (Button 3)
+        0x15,
+        0x00,  #     Logical Minimum (0)
+        0x25,
+        0x01,  #     Logical Maximum (1)
+        0x95,
+        0x03,  #     Report Count (3)
+        0x75,
+        0x01,  #     Report Size (1)
+        0x81,
+        0x02,  #     Input (Data, Variable, Absolute)
+        # 5 bits padding
+        0x95,
+        0x01,  #     Report Count (1)
+        0x75,
+        0x05,  #     Report Size (5)
+        0x81,
+        0x01,  #     Input (Constant)
+        # X, Y relative movement
+        0x05,
+        0x01,  #     Usage Page (Generic Desktop)
+        0x09,
+        0x30,  #     Usage (X)
+        0x09,
+        0x31,  #     Usage (Y)
+        0x16,
+        0x00,
+        0x80,  #     Logical Minimum (-32768)
+        0x26,
+        0xFF,
+        0x7F,  #     Logical Maximum (32767)
+        0x75,
+        0x10,  #     Report Size (16)
+        0x95,
+        0x02,  #     Report Count (2)
+        0x81,
+        0x06,  #     Input (Data, Variable, Relative)
+        # Wheel
+        0x09,
+        0x38,  #     Usage (Wheel)
+        0x15,
+        0x81,  #     Logical Minimum (-127)
+        0x25,
+        0x7F,  #     Logical Maximum (127)
+        0x75,
+        0x08,  #     Report Size (8)
+        0x95,
+        0x01,  #     Report Count (1)
+        0x81,
+        0x06,  #     Input (Data, Variable, Relative)
+        0xC0,  #   End Collection
+        0xC0,  # End Collection
+    ]
+)
 
 # HID Information: bcdHID=1.11, bCountryCode=0, Flags=0x02 (normally connectable)
 HID_INFO = bytes([0x11, 0x01, 0x00, 0x02])
 
 # Device Information values
-MANUFACTURER_NAME = b"SteamDeck"
-MODEL_NUMBER = b"HoG_Controller"
+MANUFACTURER_NAME = b'SteamDeck'
+MODEL_NUMBER = b'HoG_Controller'
 # PnP ID: Vendor ID Source (Bluetooth SIG), Vendor ID (0x28DE = Valve), Product ID, Product Version
 PNP_ID = bytes([0x01, 0xDE, 0x28, 0x01, 0x00, 0x01, 0x00])  # Valve's VID
 
@@ -194,7 +282,7 @@ PNP_ID = bytes([0x01, 0xDE, 0x28, 0x01, 0x00, 0x01, 0x00])  # Valve's VID
 class GattApplication:
     """
     GATT Application that implements HID-over-GATT profile.
-    
+
     Registers D-Bus objects at:
     - APP_PATH (ObjectManager root)
     - APP_PATH/service0 (HID Service)
@@ -211,9 +299,9 @@ class GattApplication:
     - APP_PATH/service2/char0 (Device Name)
     """
 
-    APP_PATH = "/com/steamdeck/hogp"
+    APP_PATH = '/com/steamdeck/hogp'
 
-    def __init__(self, bus: Gio.DBusConnection, device_name: str = "SteamDeckHoG", verbose: bool = False):
+    def __init__(self, bus: Gio.DBusConnection, device_name: str = 'SteamDeckHoG', verbose: bool = False):
         self.bus = bus
         self.device_name = device_name
         self.verbose = verbose
@@ -221,7 +309,7 @@ class GattApplication:
         self._notifying = False
         self._notify_timeout_id: Optional[int] = None
         self._report_rate_hz = DEFAULT_REPORT_RATE_HZ
-        
+
         # Current GAMEPAD report state (Report ID 1):
         # 1 byte: Report ID (0x01)
         # 2 bytes: 11 buttons + 5 bits padding
@@ -233,7 +321,7 @@ class GattApplication:
         self._axes = [0, 0, 0, 0]  # X, Y, RX, RY as int16 (-32768 to 32767)
         self._triggers = [0, 0]  # Z (LT), RZ (RT) as uint8 (0 to 255)
         self._hat = 0x0F  # HAT switch (0-7 = directions, 0x0F = centered)
-        
+
         # Current KEYBOARD report state (Report ID 2):
         # 1 byte: Report ID (0x02)
         # 1 byte: Modifier keys (Ctrl, Shift, Alt, GUI)
@@ -242,7 +330,7 @@ class GattApplication:
         # Total: 9 bytes
         self._kbd_modifiers = 0  # Modifier bitmask
         self._kbd_keys = [0, 0, 0, 0, 0, 0]  # Up to 6 simultaneous keys
-        
+
         # Current MOUSE report state (Report ID 3):
         # 1 byte: Report ID (0x03)
         # 1 byte: Button mask + padding
@@ -254,7 +342,7 @@ class GattApplication:
         self._mouse_x = 0  # Relative X movement
         self._mouse_y = 0  # Relative Y movement
         self._mouse_wheel = 0  # Wheel movement
-        
+
         # Callbacks for external control
         self._on_notify_start: Optional[Callable[[], None]] = None
         self._on_notify_stop: Optional[Callable[[], None]] = None
@@ -262,13 +350,13 @@ class GattApplication:
     def set_report_rate(self, hz: int) -> None:
         """Set the notification rate in Hz."""
         self._report_rate_hz = max(1, min(hz, 125))
-        logger.info(f"Report rate set to {self._report_rate_hz} Hz")
+        logger.info(f'Report rate set to {self._report_rate_hz} Hz')
 
     def set_button(self, button_index: int, pressed: bool) -> None:
         """Set a button state (0-10)."""
         if 0 <= button_index < 11:
             if pressed:
-                self._buttons |= (1 << button_index)
+                self._buttons |= 1 << button_index
             else:
                 self._buttons &= ~(1 << button_index)
 
@@ -288,14 +376,14 @@ class GattApplication:
 
     def get_current_report(self) -> bytes:
         """Build the current 14-byte gamepad HID report (Report ID 1)."""
-        return struct.pack("<BH4h2BB", 0x01, self._buttons, *self._axes, *self._triggers, self._hat)
-    
+        return struct.pack('<BH4h2BB', 0x01, self._buttons, *self._axes, *self._triggers, self._hat)
+
     # === KEYBOARD METHODS ===
-    
+
     def send_key(self, key_code: int, modifiers: int = 0) -> None:
         """
         Send a single key press.
-        
+
         Args:
             key_code: HID key code (e.g., 0x04 = 'a')
             modifiers: Modifier bitmask (0x01=LCtrl, 0x02=LShift, 0x04=LAlt, 0x08=LGUI)
@@ -305,24 +393,24 @@ class GattApplication:
         self._send_keyboard_notification()
         # Release key after a short delay
         GLib.timeout_add(50, self._release_key)
-    
+
     def _release_key(self) -> bool:
         """Release all keys."""
         self._kbd_modifiers = 0
         self._kbd_keys = [0, 0, 0, 0, 0, 0]
         self._send_keyboard_notification()
         return False  # Don't repeat
-    
+
     def get_keyboard_report(self) -> bytes:
         """Build the current 9-byte keyboard HID report (Report ID 2)."""
-        return struct.pack("<BBB6B", 0x02, self._kbd_modifiers, 0, *self._kbd_keys)
-    
+        return struct.pack('<BBB6B', 0x02, self._kbd_modifiers, 0, *self._kbd_keys)
+
     # === MOUSE METHODS ===
-    
+
     def send_mouse_movement(self, dx: int, dy: int, buttons: int = 0, wheel: int = 0) -> None:
         """
         Send mouse movement.
-        
+
         Args:
             dx: Relative X movement (-32768 to 32767)
             dy: Relative Y movement (-32768 to 32767)
@@ -334,10 +422,10 @@ class GattApplication:
         self._mouse_y = max(-32768, min(32767, dy))
         self._mouse_wheel = max(-127, min(127, wheel))
         self._send_mouse_notification()
-    
+
     def get_mouse_report(self) -> bytes:
         """Build the current 7-byte mouse HID report (Report ID 3)."""
-        return struct.pack("<BBhhb", 0x03, self._mouse_buttons, self._mouse_x, self._mouse_y, self._mouse_wheel)
+        return struct.pack('<BBhhb', 0x03, self._mouse_buttons, self._mouse_x, self._mouse_y, self._mouse_wheel)
 
     def register(self) -> bool:
         """Register all GATT objects on D-Bus."""
@@ -355,10 +443,10 @@ class GattApplication:
             self._register_dis_pnp_id_char()
             self._register_gap_service()
             self._register_gap_device_name_char()
-            logger.info(f"GATT objects registered under {self.APP_PATH}")
+            logger.info(f'GATT objects registered under {self.APP_PATH}')
             return True
         except Exception as e:
-            logger.error(f"Failed to register GATT objects: {e}")
+            logger.error(f'Failed to register GATT objects: {e}')
             self.unregister()
             return False
 
@@ -369,9 +457,9 @@ class GattApplication:
             try:
                 self.bus.unregister_object(reg_id)
             except Exception as e:
-                logger.debug(f"Error unregistering object {reg_id}: {e}")
+                logger.debug(f'Error unregistering object {reg_id}: {e}')
         self._registrations.clear()
-        logger.info("GATT objects unregistered")
+        logger.info('GATT objects unregistered')
 
     def _register_object_manager(self) -> None:
         """Register ObjectManager interface at APP_PATH."""
@@ -405,133 +493,133 @@ class GattApplication:
         invocation: Gio.DBusMethodInvocation,
     ) -> None:
         """Handle ObjectManager.GetManagedObjects."""
-        if method_name == "GetManagedObjects":
+        if method_name == 'GetManagedObjects':
             if self.verbose:
-                logger.info(f"GetManagedObjects called by {sender}")
+                logger.info(f'GetManagedObjects called by {sender}')
             objects = self._get_managed_objects()
-            invocation.return_value(GLib.Variant("(a{oa{sa{sv}}})", (objects,)))
+            invocation.return_value(GLib.Variant('(a{oa{sa{sv}}})', (objects,)))
         else:
             invocation.return_dbus_error(
-                "org.freedesktop.DBus.Error.UnknownMethod",
-                f"Unknown method: {method_name}",
+                'org.freedesktop.DBus.Error.UnknownMethod',
+                f'Unknown method: {method_name}',
             )
 
     def _get_managed_objects(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
         """Build the managed objects dictionary for GetManagedObjects."""
-        service_path = f"{self.APP_PATH}/service0"
-        char0_path = f"{service_path}/char0"
-        char1_path = f"{service_path}/char1"
-        char2_path = f"{service_path}/char2"
-        char3_path = f"{service_path}/char3"
-        desc0_path = f"{char3_path}/desc0"
-        
+        service_path = f'{self.APP_PATH}/service0'
+        char0_path = f'{service_path}/char0'
+        char1_path = f'{service_path}/char1'
+        char2_path = f'{service_path}/char2'
+        char3_path = f'{service_path}/char3'
+        desc0_path = f'{char3_path}/desc0'
+
         # Device Information Service paths
-        dis_service_path = f"{self.APP_PATH}/service1"
-        dis_char0_path = f"{dis_service_path}/char0"
-        dis_char1_path = f"{dis_service_path}/char1"
-        dis_char2_path = f"{dis_service_path}/char2"
+        dis_service_path = f'{self.APP_PATH}/service1'
+        dis_char0_path = f'{dis_service_path}/char0'
+        dis_char1_path = f'{dis_service_path}/char1'
+        dis_char2_path = f'{dis_service_path}/char2'
 
         return {
             service_path: {
                 GATT_SERVICE_IFACE: {
-                    "UUID": GLib.Variant("s", HID_SERVICE_UUID),
-                    "Primary": GLib.Variant("b", True),
-                    "Characteristics": GLib.Variant("ao", [char0_path, char1_path, char2_path, char3_path]),
+                    'UUID': GLib.Variant('s', HID_SERVICE_UUID),
+                    'Primary': GLib.Variant('b', True),
+                    'Characteristics': GLib.Variant('ao', [char0_path, char1_path, char2_path, char3_path]),
                 },
             },
             char0_path: {
                 GATT_CHAR_IFACE: {
-                    "UUID": GLib.Variant("s", HID_INFO_UUID),
-                    "Service": GLib.Variant("o", service_path),
-                    "Flags": GLib.Variant("as", ["read"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', HID_INFO_UUID),
+                    'Service': GLib.Variant('o', service_path),
+                    'Flags': GLib.Variant('as', ['read']),
+                    'Descriptors': GLib.Variant('ao', []),
                 },
             },
             char1_path: {
                 GATT_CHAR_IFACE: {
-                    "UUID": GLib.Variant("s", REPORT_MAP_UUID),
-                    "Service": GLib.Variant("o", service_path),
-                    "Flags": GLib.Variant("as", ["read"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', REPORT_MAP_UUID),
+                    'Service': GLib.Variant('o', service_path),
+                    'Flags': GLib.Variant('as', ['read']),
+                    'Descriptors': GLib.Variant('ao', []),
                 },
             },
             char2_path: {
                 GATT_CHAR_IFACE: {
-                    "UUID": GLib.Variant("s", HID_CONTROL_POINT_UUID),
-                    "Service": GLib.Variant("o", service_path),
-                    "Flags": GLib.Variant("as", ["write-without-response"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', HID_CONTROL_POINT_UUID),
+                    'Service': GLib.Variant('o', service_path),
+                    'Flags': GLib.Variant('as', ['write-without-response']),
+                    'Descriptors': GLib.Variant('ao', []),
                 },
             },
             char3_path: {
                 GATT_CHAR_IFACE: {
-                    "UUID": GLib.Variant("s", REPORT_UUID),
-                    "Service": GLib.Variant("o", service_path),
-                    "Flags": GLib.Variant("as", ["read", "notify"]),
-                    "Descriptors": GLib.Variant("ao", [desc0_path]),
+                    'UUID': GLib.Variant('s', REPORT_UUID),
+                    'Service': GLib.Variant('o', service_path),
+                    'Flags': GLib.Variant('as', ['read', 'notify']),
+                    'Descriptors': GLib.Variant('ao', [desc0_path]),
                 },
             },
             desc0_path: {
                 GATT_DESC_IFACE: {
-                    "UUID": GLib.Variant("s", REPORT_REFERENCE_UUID),
-                    "Characteristic": GLib.Variant("o", char3_path),
-                    "Flags": GLib.Variant("as", ["read"]),
+                    'UUID': GLib.Variant('s', REPORT_REFERENCE_UUID),
+                    'Characteristic': GLib.Variant('o', char3_path),
+                    'Flags': GLib.Variant('as', ['read']),
                 },
             },
             dis_service_path: {
                 GATT_SERVICE_IFACE: {
-                    "UUID": GLib.Variant("s", DEVICE_INFO_SERVICE_UUID),
-                    "Primary": GLib.Variant("b", True),
-                    "Characteristics": GLib.Variant("ao", [dis_char0_path, dis_char1_path, dis_char2_path]),
+                    'UUID': GLib.Variant('s', DEVICE_INFO_SERVICE_UUID),
+                    'Primary': GLib.Variant('b', True),
+                    'Characteristics': GLib.Variant('ao', [dis_char0_path, dis_char1_path, dis_char2_path]),
                 },
             },
             dis_char0_path: {
                 GATT_CHAR_IFACE: {
-                    "UUID": GLib.Variant("s", MANUFACTURER_NAME_UUID),
-                    "Service": GLib.Variant("o", dis_service_path),
-                    "Flags": GLib.Variant("as", ["read"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', MANUFACTURER_NAME_UUID),
+                    'Service': GLib.Variant('o', dis_service_path),
+                    'Flags': GLib.Variant('as', ['read']),
+                    'Descriptors': GLib.Variant('ao', []),
                 },
             },
             dis_char1_path: {
                 GATT_CHAR_IFACE: {
-                    "UUID": GLib.Variant("s", MODEL_NUMBER_UUID),
-                    "Service": GLib.Variant("o", dis_service_path),
-                    "Flags": GLib.Variant("as", ["read"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', MODEL_NUMBER_UUID),
+                    'Service': GLib.Variant('o', dis_service_path),
+                    'Flags': GLib.Variant('as', ['read']),
+                    'Descriptors': GLib.Variant('ao', []),
                 },
             },
             dis_char2_path: {
                 GATT_CHAR_IFACE: {
-                    "UUID": GLib.Variant("s", PNP_ID_UUID),
-                    "Service": GLib.Variant("o", dis_service_path),
-                    "Flags": GLib.Variant("as", ["read"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', PNP_ID_UUID),
+                    'Service': GLib.Variant('o', dis_service_path),
+                    'Flags': GLib.Variant('as', ['read']),
+                    'Descriptors': GLib.Variant('ao', []),
                 },
             },
         }
-        
+
         # Add GAP service if registered
-        gap_service_path = f"{self.APP_PATH}/service2"
-        gap_char0_path = f"{gap_service_path}/char0"
-        
+        gap_service_path = f'{self.APP_PATH}/service2'
+        gap_char0_path = f'{gap_service_path}/char0'
+
         result = dict(result)  # Make mutable copy
         result[gap_service_path] = {
             GATT_SERVICE_IFACE: {
-                "UUID": GLib.Variant("s", GAP_SERVICE_UUID),
-                "Primary": GLib.Variant("b", True),
-                "Characteristics": GLib.Variant("ao", [gap_char0_path]),
+                'UUID': GLib.Variant('s', GAP_SERVICE_UUID),
+                'Primary': GLib.Variant('b', True),
+                'Characteristics': GLib.Variant('ao', [gap_char0_path]),
             },
         }
         result[gap_char0_path] = {
             GATT_CHAR_IFACE: {
-                "UUID": GLib.Variant("s", DEVICE_NAME_UUID),
-                "Service": GLib.Variant("o", gap_service_path),
-                "Flags": GLib.Variant("as", ["read"]),
-                "Descriptors": GLib.Variant("ao", []),
+                'UUID': GLib.Variant('s', DEVICE_NAME_UUID),
+                'Service': GLib.Variant('o', gap_service_path),
+                'Flags': GLib.Variant('as', ['read']),
+                'Descriptors': GLib.Variant('ao', []),
             },
         }
-        
+
         return result
 
     def _register_service(self) -> None:
@@ -557,8 +645,8 @@ class GattApplication:
         </node>
         """
         node_info = Gio.DBusNodeInfo.new_for_xml(xml)
-        service_path = f"{self.APP_PATH}/service0"
-        
+        service_path = f'{self.APP_PATH}/service0'
+
         # Register Properties interface
         reg_id = self.bus.register_object(
             service_path,
@@ -569,54 +657,52 @@ class GattApplication:
         )
         self._registrations.append(reg_id)
 
-    def _handle_service_props(
-        self, connection, sender, path, iface, method, params, invocation
-    ) -> None:
+    def _handle_service_props(self, connection, sender, path, iface, method, params, invocation) -> None:
         """Handle Properties calls on the service."""
-        char0_path = f"{self.APP_PATH}/service0/char0"
-        char1_path = f"{self.APP_PATH}/service0/char1"
-        char2_path = f"{self.APP_PATH}/service0/char2"
-        char3_path = f"{self.APP_PATH}/service0/char3"
-        
+        char0_path = f'{self.APP_PATH}/service0/char0'
+        char1_path = f'{self.APP_PATH}/service0/char1'
+        char2_path = f'{self.APP_PATH}/service0/char2'
+        char3_path = f'{self.APP_PATH}/service0/char3'
+
         props = {
-            "UUID": GLib.Variant("s", HID_SERVICE_UUID),
-            "Primary": GLib.Variant("b", True),
-            "Characteristics": GLib.Variant("ao", [char0_path, char1_path, char2_path, char3_path]),
+            'UUID': GLib.Variant('s', HID_SERVICE_UUID),
+            'Primary': GLib.Variant('b', True),
+            'Characteristics': GLib.Variant('ao', [char0_path, char1_path, char2_path, char3_path]),
         }
-        
-        if method == "Get":
+
+        if method == 'Get':
             iface_name, prop_name = params.unpack()
             if prop_name in props:
-                invocation.return_value(GLib.Variant("(v)", (props[prop_name],)))
+                invocation.return_value(GLib.Variant('(v)', (props[prop_name],)))
             else:
                 invocation.return_dbus_error(
-                    "org.freedesktop.DBus.Error.InvalidArgs",
-                    f"Unknown property: {prop_name}",
+                    'org.freedesktop.DBus.Error.InvalidArgs',
+                    f'Unknown property: {prop_name}',
                 )
-        elif method == "GetAll":
-            invocation.return_value(GLib.Variant("(a{sv})", (props,)))
+        elif method == 'GetAll':
+            invocation.return_value(GLib.Variant('(a{sv})', (props,)))
         else:
             invocation.return_dbus_error(
-                "org.freedesktop.DBus.Error.UnknownMethod",
-                f"Unknown method: {method}",
+                'org.freedesktop.DBus.Error.UnknownMethod',
+                f'Unknown method: {method}',
             )
 
     def _register_hid_info_char(self) -> None:
         """Register HID Information characteristic."""
         self._register_read_char(
-            f"{self.APP_PATH}/service0/char0",
+            f'{self.APP_PATH}/service0/char0',
             HID_INFO_UUID,
             HID_INFO,
-            "HID Information",
+            'HID Information',
         )
 
     def _register_report_map_char(self) -> None:
         """Register Report Map characteristic."""
         self._register_read_char(
-            f"{self.APP_PATH}/service0/char1",
+            f'{self.APP_PATH}/service0/char1',
             REPORT_MAP_UUID,
             REPORT_MAP,
-            "Report Map",
+            'Report Map',
         )
 
     def _register_hid_control_point_char(self) -> None:
@@ -646,49 +732,49 @@ class GattApplication:
             </interface>
         </node>
         """
-        path = f"{self.APP_PATH}/service0/char2"
-        service_path = f"{self.APP_PATH}/service0"
+        path = f'{self.APP_PATH}/service0/char2'
+        service_path = f'{self.APP_PATH}/service0'
         node_info = Gio.DBusNodeInfo.new_for_xml(xml)
 
         def handler(conn, sender, obj_path, iface, method, params, invoc):
             if iface == GATT_CHAR_IFACE:
-                if method == "WriteValue":
+                if method == 'WriteValue':
                     value, options = params.unpack()
                     if self.verbose:
-                        logger.info(f"HID Control Point WriteValue: {bytes(value).hex()}")
+                        logger.info(f'HID Control Point WriteValue: {bytes(value).hex()}')
                     invoc.return_value(None)
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             elif iface == DBUS_PROPS_IFACE:
                 props = {
-                    "UUID": GLib.Variant("s", HID_CONTROL_POINT_UUID),
-                    "Service": GLib.Variant("o", service_path),
-                    "Flags": GLib.Variant("as", ["write-without-response"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', HID_CONTROL_POINT_UUID),
+                    'Service': GLib.Variant('o', service_path),
+                    'Flags': GLib.Variant('as', ['write-without-response']),
+                    'Descriptors': GLib.Variant('ao', []),
                 }
-                if method == "Get":
+                if method == 'Get':
                     _, prop = params.unpack()
                     if prop in props:
-                        invoc.return_value(GLib.Variant("(v)", (props[prop],)))
+                        invoc.return_value(GLib.Variant('(v)', (props[prop],)))
                     else:
                         invoc.return_dbus_error(
-                            "org.freedesktop.DBus.Error.InvalidArgs",
-                            f"Unknown property: {prop}",
+                            'org.freedesktop.DBus.Error.InvalidArgs',
+                            f'Unknown property: {prop}',
                         )
-                elif method == "GetAll":
-                    invoc.return_value(GLib.Variant("(a{sv})", (props,)))
+                elif method == 'GetAll':
+                    invoc.return_value(GLib.Variant('(a{sv})', (props,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             else:
                 invoc.return_dbus_error(
-                    "org.freedesktop.DBus.Error.UnknownInterface",
-                    f"Unknown interface: {iface}",
+                    'org.freedesktop.DBus.Error.UnknownInterface',
+                    f'Unknown interface: {iface}',
                 )
 
         reg_id = self.bus.register_object(path, node_info.interfaces[0], handler, None, None)
@@ -696,9 +782,7 @@ class GattApplication:
         reg_id = self.bus.register_object(path, node_info.interfaces[1], handler, None, None)
         self._registrations.append(reg_id)
 
-    def _register_read_char(
-        self, path: str, uuid: str, value: bytes, name: str
-    ) -> None:
+    def _register_read_char(self, path: str, uuid: str, value: bytes, name: str) -> None:
         """Register a read-only characteristic."""
         xml = f"""
         <node>
@@ -725,47 +809,47 @@ class GattApplication:
             </interface>
         </node>
         """
-        service_path = f"{self.APP_PATH}/service0"
+        service_path = f'{self.APP_PATH}/service0'
         node_info = Gio.DBusNodeInfo.new_for_xml(xml)
 
         def handler(conn, sender, obj_path, iface, method, params, invoc):
             if iface == GATT_CHAR_IFACE:
-                if method == "ReadValue":
+                if method == 'ReadValue':
                     if self.verbose:
-                        logger.info(f"{name} ReadValue called by {sender}")
-                    invoc.return_value(GLib.Variant("(ay)", (value,)))
+                        logger.info(f'{name} ReadValue called by {sender}')
+                    invoc.return_value(GLib.Variant('(ay)', (value,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             elif iface == DBUS_PROPS_IFACE:
                 props = {
-                    "UUID": GLib.Variant("s", uuid),
-                    "Service": GLib.Variant("o", service_path),
-                    "Flags": GLib.Variant("as", ["read"]),
-                    "Descriptors": GLib.Variant("ao", []),
+                    'UUID': GLib.Variant('s', uuid),
+                    'Service': GLib.Variant('o', service_path),
+                    'Flags': GLib.Variant('as', ['read']),
+                    'Descriptors': GLib.Variant('ao', []),
                 }
-                if method == "Get":
+                if method == 'Get':
                     _, prop = params.unpack()
                     if prop in props:
-                        invoc.return_value(GLib.Variant("(v)", (props[prop],)))
+                        invoc.return_value(GLib.Variant('(v)', (props[prop],)))
                     else:
                         invoc.return_dbus_error(
-                            "org.freedesktop.DBus.Error.InvalidArgs",
-                            f"Unknown property: {prop}",
+                            'org.freedesktop.DBus.Error.InvalidArgs',
+                            f'Unknown property: {prop}',
                         )
-                elif method == "GetAll":
-                    invoc.return_value(GLib.Variant("(a{sv})", (props,)))
+                elif method == 'GetAll':
+                    invoc.return_value(GLib.Variant('(a{sv})', (props,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             else:
                 invoc.return_dbus_error(
-                    "org.freedesktop.DBus.Error.UnknownInterface",
-                    f"Unknown interface: {iface}",
+                    'org.freedesktop.DBus.Error.UnknownInterface',
+                    f'Unknown interface: {iface}',
                 )
 
         reg_id = self.bus.register_object(path, node_info.interfaces[0], handler, None, None)
@@ -803,61 +887,61 @@ class GattApplication:
             </interface>
         </node>
         """
-        path = f"{self.APP_PATH}/service0/char3"
-        desc0_path = f"{path}/desc0"
-        service_path = f"{self.APP_PATH}/service0"
+        path = f'{self.APP_PATH}/service0/char3'
+        desc0_path = f'{path}/desc0'
+        service_path = f'{self.APP_PATH}/service0'
         node_info = Gio.DBusNodeInfo.new_for_xml(xml)
 
         def handler(conn, sender, obj_path, iface, method, params, invoc):
             if iface == GATT_CHAR_IFACE:
-                if method == "ReadValue":
+                if method == 'ReadValue':
                     if self.verbose:
-                        logger.info(f"Report ReadValue called by {sender}")
+                        logger.info(f'Report ReadValue called by {sender}')
                     report = self.get_current_report()
-                    invoc.return_value(GLib.Variant("(ay)", (report,)))
-                elif method == "StartNotify":
+                    invoc.return_value(GLib.Variant('(ay)', (report,)))
+                elif method == 'StartNotify':
                     if self.verbose:
-                        logger.info(f"Report StartNotify called by {sender}")
+                        logger.info(f'Report StartNotify called by {sender}')
                     self.start_notify()
                     invoc.return_value(None)
-                elif method == "StopNotify":
+                elif method == 'StopNotify':
                     if self.verbose:
-                        logger.info(f"Report StopNotify called by {sender}")
+                        logger.info(f'Report StopNotify called by {sender}')
                     self.stop_notify()
                     invoc.return_value(None)
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             elif iface == DBUS_PROPS_IFACE:
                 props = {
-                    "UUID": GLib.Variant("s", REPORT_UUID),
-                    "Service": GLib.Variant("o", service_path),
-                    "Flags": GLib.Variant("as", ["read", "notify"]),
-                    "Descriptors": GLib.Variant("ao", [desc0_path]),
-                    "Notifying": GLib.Variant("b", self._notifying),
+                    'UUID': GLib.Variant('s', REPORT_UUID),
+                    'Service': GLib.Variant('o', service_path),
+                    'Flags': GLib.Variant('as', ['read', 'notify']),
+                    'Descriptors': GLib.Variant('ao', [desc0_path]),
+                    'Notifying': GLib.Variant('b', self._notifying),
                 }
-                if method == "Get":
+                if method == 'Get':
                     _, prop = params.unpack()
                     if prop in props:
-                        invoc.return_value(GLib.Variant("(v)", (props[prop],)))
+                        invoc.return_value(GLib.Variant('(v)', (props[prop],)))
                     else:
                         invoc.return_dbus_error(
-                            "org.freedesktop.DBus.Error.InvalidArgs",
-                            f"Unknown property: {prop}",
+                            'org.freedesktop.DBus.Error.InvalidArgs',
+                            f'Unknown property: {prop}',
                         )
-                elif method == "GetAll":
-                    invoc.return_value(GLib.Variant("(a{sv})", (props,)))
+                elif method == 'GetAll':
+                    invoc.return_value(GLib.Variant('(a{sv})', (props,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             else:
                 invoc.return_dbus_error(
-                    "org.freedesktop.DBus.Error.UnknownInterface",
-                    f"Unknown interface: {iface}",
+                    'org.freedesktop.DBus.Error.UnknownInterface',
+                    f'Unknown interface: {iface}',
                 )
 
         reg_id = self.bus.register_object(path, node_info.interfaces[0], handler, None, None)
@@ -891,50 +975,50 @@ class GattApplication:
             </interface>
         </node>
         """
-        char_path = f"{self.APP_PATH}/service0/char3"
-        path = f"{char_path}/desc0"
+        char_path = f'{self.APP_PATH}/service0/char3'
+        path = f'{char_path}/desc0'
         node_info = Gio.DBusNodeInfo.new_for_xml(xml)
-        
+
         # Report Reference: Report ID = 0, Report Type = 1 (Input)
         report_ref_value = bytes([0x00, 0x01])
 
         def handler(conn, sender, obj_path, iface, method, params, invoc):
             if iface == GATT_DESC_IFACE:
-                if method == "ReadValue":
+                if method == 'ReadValue':
                     if self.verbose:
-                        logger.info(f"Report Reference ReadValue called by {sender}")
-                    invoc.return_value(GLib.Variant("(ay)", (report_ref_value,)))
+                        logger.info(f'Report Reference ReadValue called by {sender}')
+                    invoc.return_value(GLib.Variant('(ay)', (report_ref_value,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             elif iface == DBUS_PROPS_IFACE:
                 props = {
-                    "UUID": GLib.Variant("s", REPORT_REFERENCE_UUID),
-                    "Characteristic": GLib.Variant("o", char_path),
-                    "Flags": GLib.Variant("as", ["read"]),
+                    'UUID': GLib.Variant('s', REPORT_REFERENCE_UUID),
+                    'Characteristic': GLib.Variant('o', char_path),
+                    'Flags': GLib.Variant('as', ['read']),
                 }
-                if method == "Get":
+                if method == 'Get':
                     _, prop = params.unpack()
                     if prop in props:
-                        invoc.return_value(GLib.Variant("(v)", (props[prop],)))
+                        invoc.return_value(GLib.Variant('(v)', (props[prop],)))
                     else:
                         invoc.return_dbus_error(
-                            "org.freedesktop.DBus.Error.InvalidArgs",
-                            f"Unknown property: {prop}",
+                            'org.freedesktop.DBus.Error.InvalidArgs',
+                            f'Unknown property: {prop}',
                         )
-                elif method == "GetAll":
-                    invoc.return_value(GLib.Variant("(a{sv})", (props,)))
+                elif method == 'GetAll':
+                    invoc.return_value(GLib.Variant('(a{sv})', (props,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             else:
                 invoc.return_dbus_error(
-                    "org.freedesktop.DBus.Error.UnknownInterface",
-                    f"Unknown interface: {iface}",
+                    'org.freedesktop.DBus.Error.UnknownInterface',
+                    f'Unknown interface: {iface}',
                 )
 
         reg_id = self.bus.register_object(path, node_info.interfaces[0], handler, None, None)
@@ -965,39 +1049,39 @@ class GattApplication:
         </node>
         """
         node_info = Gio.DBusNodeInfo.new_for_xml(xml)
-        service_path = f"{self.APP_PATH}/service1"
-        
-        char0_path = f"{service_path}/char0"
-        char1_path = f"{service_path}/char1"
-        char2_path = f"{service_path}/char2"
-        
+        service_path = f'{self.APP_PATH}/service1'
+
+        char0_path = f'{service_path}/char0'
+        char1_path = f'{service_path}/char1'
+        char2_path = f'{service_path}/char2'
+
         def handler(conn, sender, path, iface, method, params, invoc):
             if iface == DBUS_PROPS_IFACE:
                 props = {
-                    "UUID": GLib.Variant("s", DEVICE_INFO_SERVICE_UUID),
-                    "Primary": GLib.Variant("b", True),
-                    "Characteristics": GLib.Variant("ao", [char0_path, char1_path, char2_path]),
+                    'UUID': GLib.Variant('s', DEVICE_INFO_SERVICE_UUID),
+                    'Primary': GLib.Variant('b', True),
+                    'Characteristics': GLib.Variant('ao', [char0_path, char1_path, char2_path]),
                 }
-                if method == "Get":
+                if method == 'Get':
                     _, prop = params.unpack()
                     if prop in props:
-                        invoc.return_value(GLib.Variant("(v)", (props[prop],)))
+                        invoc.return_value(GLib.Variant('(v)', (props[prop],)))
                     else:
                         invoc.return_dbus_error(
-                            "org.freedesktop.DBus.Error.InvalidArgs",
-                            f"Unknown property: {prop}",
+                            'org.freedesktop.DBus.Error.InvalidArgs',
+                            f'Unknown property: {prop}',
                         )
-                elif method == "GetAll":
-                    invoc.return_value(GLib.Variant("(a{sv})", (props,)))
+                elif method == 'GetAll':
+                    invoc.return_value(GLib.Variant('(a{sv})', (props,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             else:
                 invoc.return_dbus_error(
-                    "org.freedesktop.DBus.Error.UnknownInterface",
-                    f"Unknown interface: {iface}",
+                    'org.freedesktop.DBus.Error.UnknownInterface',
+                    f'Unknown interface: {iface}',
                 )
 
         reg_id = self.bus.register_object(service_path, node_info.interfaces[1], handler, None, None)
@@ -1006,28 +1090,28 @@ class GattApplication:
     def _register_dis_manufacturer_char(self) -> None:
         """Register Device Information Service - Manufacturer Name characteristic."""
         self._register_read_char(
-            f"{self.APP_PATH}/service1/char0",
+            f'{self.APP_PATH}/service1/char0',
             MANUFACTURER_NAME_UUID,
             MANUFACTURER_NAME,
-            "DIS Manufacturer Name",
+            'DIS Manufacturer Name',
         )
 
     def _register_dis_model_char(self) -> None:
         """Register Device Information Service - Model Number characteristic."""
         self._register_read_char(
-            f"{self.APP_PATH}/service1/char1",
+            f'{self.APP_PATH}/service1/char1',
             MODEL_NUMBER_UUID,
             MODEL_NUMBER,
-            "DIS Model Number",
+            'DIS Model Number',
         )
 
     def _register_dis_pnp_id_char(self) -> None:
         """Register Device Information Service - PnP ID characteristic."""
         self._register_read_char(
-            f"{self.APP_PATH}/service1/char2",
+            f'{self.APP_PATH}/service1/char2',
             PNP_ID_UUID,
             PNP_ID,
-            "DIS PnP ID",
+            'DIS PnP ID',
         )
 
     def _register_gap_service(self) -> None:
@@ -1053,37 +1137,37 @@ class GattApplication:
         </node>
         """
         node_info = Gio.DBusNodeInfo.new_for_xml(xml)
-        service_path = f"{self.APP_PATH}/service2"
-        
-        char0_path = f"{service_path}/char0"
-        
+        service_path = f'{self.APP_PATH}/service2'
+
+        char0_path = f'{service_path}/char0'
+
         def handler(conn, sender, path, iface, method, params, invoc):
             if iface == DBUS_PROPS_IFACE:
                 props = {
-                    "UUID": GLib.Variant("s", GAP_SERVICE_UUID),
-                    "Primary": GLib.Variant("b", True),
-                    "Characteristics": GLib.Variant("ao", [char0_path]),
+                    'UUID': GLib.Variant('s', GAP_SERVICE_UUID),
+                    'Primary': GLib.Variant('b', True),
+                    'Characteristics': GLib.Variant('ao', [char0_path]),
                 }
-                if method == "Get":
+                if method == 'Get':
                     _, prop = params.unpack()
                     if prop in props:
-                        invoc.return_value(GLib.Variant("(v)", (props[prop],)))
+                        invoc.return_value(GLib.Variant('(v)', (props[prop],)))
                     else:
                         invoc.return_dbus_error(
-                            "org.freedesktop.DBus.Error.InvalidArgs",
-                            f"Unknown property: {prop}",
+                            'org.freedesktop.DBus.Error.InvalidArgs',
+                            f'Unknown property: {prop}',
                         )
-                elif method == "GetAll":
-                    invoc.return_value(GLib.Variant("(a{sv})", (props,)))
+                elif method == 'GetAll':
+                    invoc.return_value(GLib.Variant('(a{sv})', (props,)))
                 else:
                     invoc.return_dbus_error(
-                        "org.freedesktop.DBus.Error.UnknownMethod",
-                        f"Unknown method: {method}",
+                        'org.freedesktop.DBus.Error.UnknownMethod',
+                        f'Unknown method: {method}',
                     )
             else:
                 invoc.return_dbus_error(
-                    "org.freedesktop.DBus.Error.UnknownInterface",
-                    f"Unknown interface: {iface}",
+                    'org.freedesktop.DBus.Error.UnknownInterface',
+                    f'Unknown interface: {iface}',
                 )
 
         reg_id = self.bus.register_object(service_path, node_info.interfaces[1], handler, None, None)
@@ -1092,10 +1176,10 @@ class GattApplication:
     def _register_gap_device_name_char(self) -> None:
         """Register GAP Device Name characteristic."""
         self._register_read_char(
-            f"{self.APP_PATH}/service2/char0",
+            f'{self.APP_PATH}/service2/char0',
             DEVICE_NAME_UUID,
             self.device_name.encode('utf-8'),
-            "GAP Device Name",
+            'GAP Device Name',
         )
 
     def start_notify(self) -> None:
@@ -1103,11 +1187,11 @@ class GattApplication:
         if self._notifying:
             return
         self._notifying = True
-        logger.info("Notifications started")
-        
+        logger.info('Notifications started')
+
         if self._on_notify_start:
             self._on_notify_start()
-        
+
         interval_ms = 1000 // self._report_rate_hz
         self._notify_timeout_id = GLib.timeout_add(interval_ms, self._send_notification)
 
@@ -1116,12 +1200,12 @@ class GattApplication:
         if not self._notifying:
             return
         self._notifying = False
-        logger.info("Notifications stopped")
-        
+        logger.info('Notifications stopped')
+
         if self._notify_timeout_id is not None:
             GLib.source_remove(self._notify_timeout_id)
             self._notify_timeout_id = None
-        
+
         if self._on_notify_stop:
             self._on_notify_stop()
 
@@ -1129,79 +1213,81 @@ class GattApplication:
         """Send a notification with the current gamepad report value."""
         if not self._notifying:
             return False
-        
+
         report = self.get_current_report()
-        char_path = f"{self.APP_PATH}/service0/char3"
-        
+        char_path = f'{self.APP_PATH}/service0/char3'
+
         try:
             self.bus.emit_signal(
                 None,
                 char_path,
                 DBUS_PROPS_IFACE,
-                "PropertiesChanged",
+                'PropertiesChanged',
                 GLib.Variant(
-                    "(sa{sv}as)",
+                    '(sa{sv}as)',
                     (
                         GATT_CHAR_IFACE,
-                        {"Value": GLib.Variant("ay", report)},
+                        {'Value': GLib.Variant('ay', report)},
                         [],
                     ),
                 ),
             )
         except Exception as e:
-            logger.error(f"Error sending gamepad notification: {e}")
-        
+            logger.error(f'Error sending gamepad notification: {e}')
+
         return True  # Continue the timeout
-    
+
     def _send_keyboard_notification(self) -> None:
         """Send a keyboard report notification immediately."""
         if not self._notifying:
-            logger.debug("Not sending keyboard notification - not notifying")
+            logger.debug('Not sending keyboard notification - not notifying')
             return
-        
+
         report = self.get_keyboard_report()
-        char_path = f"{self.APP_PATH}/service0/char3"
-        
-        logger.debug(f"Sending keyboard notification: modifiers={self._kbd_modifiers:#04x}, keys={[f'{k:#04x}' for k in self._kbd_keys]}")
-        
+        char_path = f'{self.APP_PATH}/service0/char3'
+
+        logger.debug(
+            f'Sending keyboard notification: modifiers={self._kbd_modifiers:#04x}, keys={[f"{k:#04x}" for k in self._kbd_keys]}'
+        )
+
         try:
             self.bus.emit_signal(
                 None,
                 char_path,
                 DBUS_PROPS_IFACE,
-                "PropertiesChanged",
+                'PropertiesChanged',
                 GLib.Variant(
-                    "(sa{sv}as)",
+                    '(sa{sv}as)',
                     (
                         GATT_CHAR_IFACE,
-                        {"Value": GLib.Variant("ay", report)},
+                        {'Value': GLib.Variant('ay', report)},
                         [],
                     ),
                 ),
             )
-            logger.debug("Keyboard notification sent successfully")
+            logger.debug('Keyboard notification sent successfully')
         except Exception as e:
-            logger.error(f"Error sending keyboard notification: {e}")
-    
+            logger.error(f'Error sending keyboard notification: {e}')
+
     def _send_mouse_notification(self) -> None:
         """Send a mouse report notification immediately."""
         if not self._notifying:
             return
-        
+
         report = self.get_mouse_report()
-        char_path = f"{self.APP_PATH}/service0/char3"
-        
+        char_path = f'{self.APP_PATH}/service0/char3'
+
         try:
             self.bus.emit_signal(
                 None,
                 char_path,
                 DBUS_PROPS_IFACE,
-                "PropertiesChanged",
+                'PropertiesChanged',
                 GLib.Variant(
-                    "(sa{sv}as)",
+                    '(sa{sv}as)',
                     (
                         GATT_CHAR_IFACE,
-                        {"Value": GLib.Variant("ay", report)},
+                        {'Value': GLib.Variant('ay', report)},
                         [],
                     ),
                 ),
@@ -1211,7 +1297,7 @@ class GattApplication:
             self._mouse_y = 0
             self._mouse_wheel = 0
         except Exception as e:
-            logger.error(f"Error sending mouse notification: {e}")
+            logger.error(f'Error sending mouse notification: {e}')
 
     @property
     def notifying(self) -> bool:
