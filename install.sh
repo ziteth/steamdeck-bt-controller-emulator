@@ -46,7 +46,7 @@ python3 -c "import gi; gi.require_version('Gtk', '4.0'); from gi.repository impo
 python3 -c "import evdev" 2>/dev/null || DEPS_OK=false
 
 if [ "$DEPS_OK" = false ]; then
-    echo "Error: Missing Python dependencies (python-gobject, gtk4, python-evdev)"
+    echo "Error: Missing Python dependencies python-gobject, gtk4, python-evdev"
     echo "These should be pre-installed on SteamOS 3.x"
     exit 1
 fi
@@ -67,7 +67,7 @@ if ! groups "$CURRENT_USER" | grep -q "input"; then
         echo "✗ Failed to add user to 'input' group"
         exit 1
     }
-    echo "✓ Added to 'input' group (controller access)"
+    echo "✓ Added to 'input' group controller access"
     GROUPS_CHANGED=true
 else
     echo "✓ Already in 'input' group"
@@ -90,7 +90,7 @@ if ! groups "$CURRENT_USER" | grep -q "bluetooth"; then
         echo "✗ Failed to add user to 'bluetooth' group"
         exit 1
     }
-    echo "✓ Added to 'bluetooth' group (Bluetooth GATT access)"
+    echo "✓ Added to 'bluetooth' group Bluetooth GATT access"
     GROUPS_CHANGED=true
 else
     echo "✓ Already in 'bluetooth' group"
@@ -119,7 +119,7 @@ echo "✓ Sudoers rule installed"
 # Reload D-Bus
 echo "Reloading D-Bus..."
 sudo systemctl reload dbus 2>/dev/null || {
-    echo "⚠ Warning: Could not reload D-Bus (may need reboot)"
+    echo "⚠ Warning: Could not reload D-Bus may need reboot"
 }
 echo "✓ D-Bus reloaded"
 
@@ -161,9 +161,9 @@ echo "=== Installation Complete ==="
 echo
 if [ "$GROUPS_CHANGED" = true ]; then
     echo "⚠ Activating new group memberships..."
-    exec sg input -c "exec sg bluetooth -c 'echo; echo ✓ Groups activated; echo; echo The BT Controller Emulator runs as a normal user (no root needed).; exec $SHELL'"
+    exec sg input -c "exec sg bluetooth -c 'echo; echo ✓ Groups activated; echo; echo The BT Controller Emulator runs as a normal user, no root needed.; exec $SHELL'"
 fi
-echo "The BT Controller Emulator runs as a normal user (no root needed)."
+echo "The BT Controller Emulator runs as a normal user, no root needed."
 echo
 echo "You can now launch 'BT Controller Emulator' from:"
 echo "  - Desktop mode: Application menu"
