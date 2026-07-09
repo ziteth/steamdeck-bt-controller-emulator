@@ -301,6 +301,9 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
         def get_hid_output():
             return self._gatt_app or self._usb_gadget
 
+        self.visualizer = ControllerVisualizer(get_hid_output)
+        main_box.append(self.visualizer)
+
         # Control buttons
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         button_box.set_halign(Gtk.Align.CENTER)
