@@ -5,7 +5,6 @@ stack {
     color: #ffffff;
 }
 
-/* Top titlebar (HeaderBar) */
 headerbar {
     background-color: #000000;
     color: #ffffff;
@@ -13,41 +12,45 @@ headerbar {
     box-shadow: none;
 }
 
-/* Standard Buttons */
-button {
+button,
+button.suggested-action,
+button.action-button,
+button .label {
     background-image: none !important;
     background-color: #000000 !important;
     color: #ffffff !important;
-    border: 1px solid #1a1a1a !important;
-    border-radius: 6px !important;
+    border: 1px solid #222222 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
     padding: 6px 12px !important;
+    border-radius: 6px !important;
 }
 
-/* Button hover state */
-button:hover {
+button:hover,
+button.suggested-action:hover {
     background-image: none !important;
     background-color: #121212 !important;
-    border-color: #262626 !important;
+    border-color: #333333 !important;
+    box-shadow: none !important;
 }
 
-/* Button active and toggled states */
 button:active, 
 button:checked {
     background-image: none !important;
     background-color: #1a1a1a !important;
-    border-color: #333333 !important;
+    border-color: #444444 !important;
+    box-shadow: none !important;
 }
 
-/* Fix for window control buttons (minimize, maximize, close) size distortion */
 headerbar windowcontrols button {
     padding: 0 !important;
     min-width: 24px !important;
     min-height: 24px !important;
     background-color: transparent !important;
     border: none !important;
+    box-shadow: none !important;
 }
 
-/* Hover effects specifically for window control buttons */
 headerbar windowcontrols button:hover {
     background-color: rgba(255, 255, 255, 0.1) !important;
 }
