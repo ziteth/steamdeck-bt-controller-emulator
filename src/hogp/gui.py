@@ -741,7 +741,7 @@ class HoGPeripheralGUI(Gtk.ApplicationWindow):
 
     def _set_black_theme(self):
         css_provider = Gtk.CssProvider()
-        css_path = os.path.join(os.path.dirname(__file__), "style/app.css")
+        css_path = os.path.join(os.path.dirname(__file__), "..//style/app.css")
         css_provider.load_from_path(css_path)
         Gtk.StyleContext.add_provider_for_display(
             Gdk.Display.get_default(), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
