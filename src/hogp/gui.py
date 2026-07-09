@@ -150,11 +150,13 @@ class ControllerVisualizer(Gtk.Box):
         button_box.set_hexpand(True)
 
         self.home_button = Gtk.Button(label='⌂ Home')
+        self.home_button.set_name("amoled-btn")
         self.home_button.set_size_request(150, 150)
         self.home_button.connect('clicked', self._send_home)
         button_box.set_start_widget(self.home_button)
 
         self.qam_button = Gtk.Button(label='⋯ QAM')
+        self.qam_button.set_name("amoled-btn")
         self.qam_button.set_size_request(150, 150)
         self.qam_button.connect('clicked', self._send_qam)
         button_box.set_end_widget(self.qam_button)

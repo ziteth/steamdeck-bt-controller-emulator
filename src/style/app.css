@@ -12,30 +12,28 @@ headerbar {
     box-shadow: none;
 }
 
-button,
-button.suggested-action,
-button.action-button,
-button .label {
+#amoled-btn {
+    all: unset !important;
     background-image: none !important;
     background-color: #000000 !important;
     color: #ffffff !important;
     border: 1px solid #222222 !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
     box-shadow: none !important;
     text-shadow: none !important;
-    padding: 6px 12px !important;
-    border-radius: 6px !important;
+    transition: none !important;
 }
 
-button:hover,
-button.suggested-action:hover {
+#amoled-btn:hover {
     background-image: none !important;
     background-color: #121212 !important;
     border-color: #333333 !important;
     box-shadow: none !important;
 }
 
-button:active, 
-button:checked {
+#amoled-btn:active, 
+#amoled-btn:checked {
     background-image: none !important;
     background-color: #1a1a1a !important;
     border-color: #444444 !important;
