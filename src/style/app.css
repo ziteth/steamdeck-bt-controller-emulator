@@ -17,7 +17,7 @@ headerbar {
 button {
     background-color: #121212;
     color: #ffffff;
-    border: 1px solid #262626;
+    border: 1px solid #121212;
     border-radius: 6px;
     padding: 6px 12px;
 }
@@ -25,65 +25,12 @@ button {
 /* Button hover state */
 button:hover {
     background-color: #1a1a1a;
-    border-color: #333333;
+    border-color: #121212;
 }
 
 /* Button active and toggled states */
 button:active, 
 button:checked {
-    background-color: #262626;
-    border-color: #444444;
-}
-
-/* Input text fields */
-entry, 
-text, 
-textview text {
-    background-color: #0a0a0a;
-    color: #ffffff;
-    border: 1px solid #262626;
-    border-radius: 6px;
-}
-
-/* Focused input field */
-entry:focus {
-    border-color: #444444;
-}
-
-/* Lists and tables (ListBox, ListView, TreeView) */
-listview, 
-listbox, 
-listbox row,
-treeview {
-    background-color: #000000;
-    color: #ffffff;
-}
-
-/* Hover state for list rows */
-listbox row:hover {
     background-color: #121212;
-}
-
-/* Selected state for list rows */
-listbox row:selected {
-    background-color: #262626;
-    color: #ffffff;
-}
-
-/* Dropdown menus and overlays (Popovers) */
-popover, 
-.menu {
-    background-color: #0a0a0a;
-    border: 1px solid #262626;
-    color: #ffffff;
-}
-
-/* Scrollbars */
-scrollbar slider {
-    background-color: #333333;
-    border-radius: 4px;
-}
-
-scrollbar slider:hover {
-    background-color: #444444;
+    border-color: #121212;
 }
